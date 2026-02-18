@@ -23,14 +23,21 @@ _Static_assert (sizeof(f32) == 4, "f32 is not 4 bytes");
 
 // ---------- Arenas ----------
 
+typedef struct clib_arena_block
+{
+	void *next_block;
+} clib_arena_block;
+
 typedef struct clib_arena
 {
-	void *data;
-	u64   count;
-	u64   capacity;
+	u64 block_size;
+	u64 current_index;
+
+	clib_arena_block *first_block;
+	clib_arena_block *current_block;
 } clib_arena;
 
-void clib_arena_init(clib_arena *a, u64 capacity);
+void clib_arena_init(clib_arena *a, u64 block_size);
 void clib_arena_destroy(clib_arena *a);
 void clib_arena_reset(clib_arena *a);
 void* clib_arena_alloc(clib_arena *a, u64 size);

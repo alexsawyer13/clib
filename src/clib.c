@@ -7,45 +7,74 @@
 
 // ---------- Arenas ----------
 
-void clib_arena_init(clib_arena *a, u64 capacity)
+void clib_arena_init(clib_arena *a, u64 block_size)
 {
 	CLIB_ASSERT(a, "a is NULL");
-	CLIB_ASSERT(capacity > 0, "Capacity is 0");
-	CLIB_ASSERT(a->data == NULL, "Already has data!");
-	a->data = malloc(capacity);
-	CLIB_ASSERT(a->data, "malloc failed");
-	a->capacity = capacity;
-	a->count = 0;
+	CLIB_ASSERT(block_size > 0, "block_size is 0");
+
+	a->first_block = malloc(block_size);
+	CLIB_ASSERT(a->first_block, "malloc failed");
+	memset(a->first_block, 0, block_size);
+
+	a->current_block = a->first_block;
+	a->current_index = sizeof(clib_arena_block);
+
+	a->block_size = block_size;
 }
 
 void clib_arena_destroy(clib_arena *a)
 {
 	CLIB_ASSERT(a, "a is NULL");
-	CLIB_ASSERT(a->data, "a has no data");
-	free(a->data);
-	a->capacity = 0;
-	a->count = 0;
-	a->data = NULL;
+	CLIB_ASSERT(a->first_block, "a has no blocks!");
+	
+	clib_arena_block *block = a->first_block;
+	while (block)
+	{
+		printf("destroy block\n");
+		clib_arena_block *new_block = block->next_block;
+		free(block);
+		block = new_block;
+	}
 }
 
 void clib_arena_reset(clib_arena *a)
 {
 	CLIB_ASSERT(a, "a is NULL");
-	a->count = 0;
+	CLIB_ASSERT(a->first_block, "a has no blocks!");
+
+	clib_arena_block *block = a->first_block->next_block;
+	while (block)
+	{
+		clib_arena_block *new_block = block->next_block;
+		free(block);
+		block = new_block;
+	}
+
+	a->first_block->next_block = NULL;
+	a->current_index = sizeof(clib_arena_block);
 }
 
 void* clib_arena_alloc(clib_arena *a, u64 size)
 {
 	CLIB_ASSERT(a, "a is NULL");
 	CLIB_ASSERT(size > 0, "size is 0");
-	if (a->count + size > a->capacity)
+	CLIB_ASSERT((size + sizeof(clib_arena_block)) < a->block_size, "allocation is bigger than a block!");
+
+
+	// If it can't fit in current block, allocate a new one
+	if (a->current_index + size > a->block_size)
 	{
-		CLIB_WARNING("Arena is full");
-		return NULL;
+		printf("new block\n");
+		clib_arena_block *new_block = malloc(a->block_size);
+		a->current_block->next_block = new_block;
+		a->current_block = new_block;
+		a->current_index = sizeof(clib_arena_block);
 	}
-	void *ret = a->data + a->count;
-	a->count += size;
-	return ret;
+
+	// Now we definitely have a valid spot for the memory to go!
+	void *ptr = a->current_block + a->current_index;
+	a->current_index += size;
+	return ptr;
 }
 
 // ---------- Vectors ----------

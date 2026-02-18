@@ -6,12 +6,17 @@
 
 int main()
 {
-	clib_prng rng = {0};
-	clib_prng_init(&rng);
+	clib_arena arena;
 
-	for (int i = 0; i < NUM_INTS; i++) {
-		printf("%d\n", clib_prng_rand_u32_range(&rng, 2, 4));
+	clib_arena_init(&arena, 1024);
+
+	for (int i = 0; i < 1024; i++)
+	{
+		printf("%d\n", i);
+		clib_arena_alloc(&arena, sizeof(int));
 	}
+
+	clib_arena_destroy(&arena);
 
 	return 0;
 }
