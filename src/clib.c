@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 // ---------- Arenas ----------
 
@@ -131,4 +132,49 @@ void clib_vector_pop(clib_vector *vector)
 	CLIB_ASSERT(vector->count > 0, "capacity has size 0");
 
 	vector->count--;
+}
+
+// ---------- Random numbers ----------
+
+void clib_prng_init(clib_prng *rng)
+{
+	CLIB_ASSERT(rng, "rng is NULL");
+	clib_prng_init_seed(rng, (u64)time(NULL), (u64)&clib_prng_init_seed);
+}
+
+void clib_prng_init_seed(clib_prng *rng, u64 initstate, u64 initseq)
+{
+	CLIB_ASSERT(rng, "rng is NULL");
+	rng->state = 0U;
+    rng->inc = (initseq << 1u) | 1u;
+    clib_prng_rand_u32(rng);
+    rng->state += initstate;
+    clib_prng_rand_u32(rng);
+}
+
+u32 clib_prng_rand_u32(clib_prng *rng)
+{
+	CLIB_ASSERT(rng, "rng is NULL");
+    u64 oldstate = rng->state;
+    rng->state = oldstate * 6364136223846793005ULL + rng->inc;
+    u32 xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
+    u32 rot = oldstate >> 59u;
+    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+
+u32 clib_prng_rand_u32_range(clib_prng *rng, u32 min, u32 max)
+{
+	CLIB_ASSERT(max > min, "max !> min");
+	return clib_prng_rand_u32(rng) % (max - min + 1) + min;
+}
+
+i32 clib_prng_rand_i32_range(clib_prng *rng, i32 min, i32 max)
+{
+	CLIB_ASSERT(max > min, "max !> min");
+	return (i32)((i64)clib_prng_rand_u32(rng) % (i64)(max - min + 1) + (i64)min);
+}
+
+f32 clib_prng_rand_f32(clib_prng *rng)
+{
+	return ((f32)clib_prng_rand_u32(rng))/((f32)((u32)-1));
 }
