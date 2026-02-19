@@ -2,19 +2,17 @@
 
 #include <stdio.h>
 
-#define NUM_INTS 10
-
 int main()
 {
 	clib_arena arena;
 
-	clib_arena_init(&arena, 1024);
+	clib_arena_init(&arena, 1024*1024);
 
-	for (int i = 0; i < 1024; i++)
-	{
-		printf("%d\n", i);
-		clib_arena_alloc(&arena, sizeof(int));
-	}
+	char *data;
+	u64 size;
+
+	i32 result = clib_file_read(&arena, "boc.c", &data, &size);
+
 
 	clib_arena_destroy(&arena);
 

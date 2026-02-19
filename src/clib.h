@@ -81,6 +81,10 @@ u32 clib_prng_rand_u32_range(clib_prng *rng, u32 min, u32 max);
 i32 clib_prng_rand_i32_range(clib_prng *rng, i32 min, i32 max);
 f32 clib_prng_rand_f32(clib_prng *rng);
 
+// ---------- Files ----------
+
+i32 clib_file_read(clib_arena *arena, const char *path, char **out_data, u64 *out_size);
+
 /*
  * PCG Random Number Generation for C.
  *

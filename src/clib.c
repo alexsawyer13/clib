@@ -30,7 +30,6 @@ void clib_arena_destroy(clib_arena *a)
 	clib_arena_block *block = a->first_block;
 	while (block)
 	{
-		printf("destroy block\n");
 		clib_arena_block *new_block = block->next_block;
 		free(block);
 		block = new_block;
@@ -64,8 +63,8 @@ void* clib_arena_alloc(clib_arena *a, u64 size)
 	// If it can't fit in current block, allocate a new one
 	if (a->current_index + size > a->block_size)
 	{
-		printf("new block\n");
 		clib_arena_block *new_block = malloc(a->block_size);
+		CLIB_ASSERT(new_block, "Failed to allocate new block");
 		a->current_block->next_block = new_block;
 		a->current_block = new_block;
 		a->current_index = sizeof(clib_arena_block);
@@ -206,4 +205,55 @@ i32 clib_prng_rand_i32_range(clib_prng *rng, i32 min, i32 max)
 f32 clib_prng_rand_f32(clib_prng *rng)
 {
 	return ((f32)clib_prng_rand_u32(rng))/((f32)((u32)-1));
+}
+
+// ---------- Files ----------
+
+i32 clib_file_read(clib_arena *arena, const char *path, char **out_data, u64 *out_size)
+{
+	FILE *f;
+	char *buffer;
+	u64 size;
+	u64 result;
+
+	*out_data = NULL;
+	*out_size = 0;
+
+	f = fopen(path, "r");
+	if (!f)
+	{
+		printf("Warning: Failed to open file %s\n", path);
+		return 0;
+	}
+
+	fseek(f, 0, SEEK_END);
+	size = (u64)ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	if (arena)
+		buffer = clib_arena_alloc(arena, size + 1);
+	else
+		buffer = malloc(size + 1);
+
+	if (!buffer)
+	{
+		printf("Warning: Unable to allocate memory for file %s\n", path);
+		return 0;
+	}
+
+	result = fread(buffer, 1, size, f);
+
+	if (result != size)
+	{
+		printf("Warning: Failed to read full file %s\n", path);
+		return 0;
+	}
+
+	fclose(f);
+
+	buffer[size] = '\0';
+	*out_data = buffer;
+	*out_size = size;
+
+	return 1;
 }
