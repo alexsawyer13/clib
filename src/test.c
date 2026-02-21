@@ -4,14 +4,12 @@
 
 int main()
 {
-	clib_arena arena;
+	clib_arena *arena;
 
-	clib_arena_init(&arena, 1024*1024);
+	arena = clib_arena_init(1024*1024);
 
-	char *data;
-	u64 size;
+	int *ptr = clib_arena_alloc(arena, 100 * sizeof(int));
 
-	i32 result = clib_file_read(&arena, "boc.c", &data, &size);
 
 
 	clib_arena_destroy(&arena);

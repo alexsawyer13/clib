@@ -30,17 +30,22 @@ typedef struct clib_arena_block
 
 typedef struct clib_arena
 {
-	u64 block_size;
+	clib_arena_block block; // clib_arena is also a valid clib_arena_block
+							// because its block metadata is stored within the first block!
+
+	clib_arena_block *current_block;
 	u64 current_index;
 
-	clib_arena_block *first_block;
-	clib_arena_block *current_block;
+	u64 block_size;
 } clib_arena;
 
-void clib_arena_init(clib_arena *a, u64 block_size);
-void clib_arena_destroy(clib_arena *a);
-void clib_arena_reset(clib_arena *a);
+clib_arena *clib_arena_init(u64 block_size);
+void clib_arena_destroy(clib_arena **a); // Deallocates ALL blocks in arena and zeros it out. Sets arena ptr to NULL
+void clib_arena_reset(clib_arena *a); // Sets arena back to beginning. Doesn't deallocate any blocks
+void clib_arena_shrink(clib_arena *a); // Deallocate all unused blocks, keeping ones with memory in!
 void* clib_arena_alloc(clib_arena *a, u64 size);
+void* clib_arena_calloc(clib_arena *a, u64 size); // Allocates AND zeroes the new memory
+void clib_arena_print_info(clib_arena *a);
 
 // ---------- Vectors ----------
 

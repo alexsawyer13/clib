@@ -7,50 +7,43 @@
 
 // ---------- Arenas ----------
 
-void clib_arena_init(clib_arena *a, u64 block_size)
+clib_arena *clib_arena_init(u64 block_size)
 {
-	CLIB_ASSERT(a, "a is NULL");
 	CLIB_ASSERT(block_size > 0, "block_size is 0");
+	CLIB_ASSERT(block_size > sizeof(clib_arena), "block_size is too small to fit arena metadata");
 
-	a->first_block = malloc(block_size);
-	CLIB_ASSERT(a->first_block, "malloc failed");
-	memset(a->first_block, 0, block_size);
+	clib_arena *a;
+	a = malloc(block_size);
+	CLIB_ASSERT(a, "Failed to allocate block");
 
-	a->current_block = a->first_block;
-	a->current_index = sizeof(clib_arena_block);
-
+	a->block.next_block = NULL;
+	a->current_block = (clib_arena_block*)a;
+	a->current_index = sizeof(clib_arena);
 	a->block_size = block_size;
+
+	return a;
 }
 
-void clib_arena_destroy(clib_arena *a)
+void clib_arena_destroy(clib_arena **a)
 {
 	CLIB_ASSERT(a, "a is NULL");
-	CLIB_ASSERT(a->first_block, "a has no blocks!");
 	
-	clib_arena_block *block = a->first_block;
-	while (block)
+	clib_arena_block *block = (clib_arena_block*)(*a);
+	while (block != NULL)
 	{
-		clib_arena_block *new_block = block->next_block;
+		clib_arena_block *next_block = block->next_block;
 		free(block);
-		block = new_block;
+		block = next_block;
 	}
+
+	*a = NULL;
 }
 
 void clib_arena_reset(clib_arena *a)
 {
 	CLIB_ASSERT(a, "a is NULL");
-	CLIB_ASSERT(a->first_block, "a has no blocks!");
-
-	clib_arena_block *block = a->first_block->next_block;
-	while (block)
-	{
-		clib_arena_block *new_block = block->next_block;
-		free(block);
-		block = new_block;
-	}
-
-	a->first_block->next_block = NULL;
-	a->current_index = sizeof(clib_arena_block);
+	a->current_block = (clib_arena_block*)a;
+	a->current_index = sizeof(clib_arena);
 }
 
 void* clib_arena_alloc(clib_arena *a, u64 size)
@@ -59,20 +52,37 @@ void* clib_arena_alloc(clib_arena *a, u64 size)
 	CLIB_ASSERT(size > 0, "size is 0");
 	CLIB_ASSERT((size + sizeof(clib_arena_block)) < a->block_size, "allocation is bigger than a block!");
 
-
-	// If it can't fit in current block, allocate a new one
+	// If it can't fit in current block, need a new one
 	if (a->current_index + size > a->block_size)
 	{
-		clib_arena_block *new_block = malloc(a->block_size);
-		CLIB_ASSERT(new_block, "Failed to allocate new block");
-		a->current_block->next_block = new_block;
-		a->current_block = new_block;
-		a->current_index = sizeof(clib_arena_block);
+		// If there's already a next block, use that
+		if (a->current_block->next_block != NULL)
+		{
+			a->current_block = a->current_block->next_block;
+			a->current_index = sizeof(clib_arena_block);
+		}
+		// Otherwise allocate a new one
+		else
+		{
+			clib_arena_block *new_block = malloc(a->block_size);
+			CLIB_ASSERT(new_block, "Failed to malloc new block");
+			a->current_block->next_block = new_block;
+			a->current_block = new_block;
+			a->current_index = sizeof(clib_arena_block);
+		}
 	}
 
 	// Now we definitely have a valid spot for the memory to go!
 	void *ptr = a->current_block + a->current_index;
 	a->current_index += size;
+	return ptr;
+}
+
+void* clib_arena_calloc(clib_arena *a, u64 size)
+{
+	CLIB_ASSERT(a, "a is NULL");
+	void *ptr = clib_arena_alloc(a, size);
+	memset(a, 0, size);
 	return ptr;
 }
 
