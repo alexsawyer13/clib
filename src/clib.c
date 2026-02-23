@@ -68,6 +68,11 @@ void clib_arena_stop_scratch(clib_arena *a)
 	a->current_index = a->scratch_index;
 	a->total_allocation_size = a->scratch_total_allocation_size;
 	a->num_allocations = a->scratch_num_allocations;
+
+	a->scratch_block = NULL;
+	a->scratch_index = 0;
+	a->scratch_total_allocation_size = 0;
+	a->scratch_num_allocations = 0;
 }
 
 void clib_arena_print_info(clib_arena *a)
