@@ -232,7 +232,7 @@ void* clib_arena_calloc(clib_arena *a, u64 size)
 {
 	CLIB_ASSERT(a, "a is NULL");
 	void *ptr = clib_arena_alloc(a, size);
-	memset(a, 0, size);
+	memset(ptr, 0, size);
 	return ptr;
 }
 
